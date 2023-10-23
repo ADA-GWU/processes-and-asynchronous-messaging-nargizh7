@@ -50,7 +50,7 @@ public class SenderReader {
             }
         }
 
-        // Check available messages in each database server
+        // Check available messages in each database server test test test
         for (String server : databaseServers) {
             try {
                 // Connect to the database server
