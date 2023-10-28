@@ -1,74 +1,88 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.Scanner;
+import java.io.*; 
+import java.sql.*; 
+import java.util.*; 
+import java.util.concurrent.*;
 
 public class Reader {
-    private static final String[] DB_IPS = {"192.168.0.1", "192.168.0.2", "192.168.0.3"};
-    private static final String READER_NAME = "Nargiz";
-    private static final String DB_USER = "dist_user";
-    private static final String DB_PASS = "dist_pass_123";
-    private static final String SQL_SELECT = "SELECT RECORD_ID, SENDER_NAME, MESSAGE, SENT_TIME FROM ASYNC_MESSAGES WHERE RECEIVED_TIME IS NULL AND SENDER_NAME != ? FOR UPDATE";
-    private static final String SQL_UPDATE = "UPDATE ASYNC_MESSAGES SET RECEIVED_TIME = CURRENT_TIMESTAMP WHERE RECORD_ID = ?";
+	// A list of database server IPs
+	private static List<String> dbServers;
 
-    public static void main(String[] args) {
-        for (String dbIp : DB_IPS) {
-            Thread thread = new Thread(() -> {
-                try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbIp + ":5432/postgres", DB_USER, DB_PASS)) {
-                    try (PreparedStatement stmt1 = conn.prepareStatement(SQL_SELECT);
-                         PreparedStatement stmt2 = conn.prepareStatement(SQL_UPDATE)) {
+	// A thread pool to execute tasks
+	private static ExecutorService executor;
 
-                        stmt1.setString(1, READER_NAME);
+	// The reader name
+	private static final String READER_NAME = "NargizH";
 
-                        while (!Thread.currentThread().isInterrupted()) {
-                            try {
-                                conn.setAutoCommit(false);
+	public static void main(String[] args) {
+	    // Initialize the list of database servers from a file
+	    dbServers = new ArrayList<>();
+	    try (BufferedReader br = new BufferedReader(new FileReader("db_servers.txt"))) {
+	        String line;
+	        while ((line = br.readLine()) != null) {
+	            dbServers.add(line.trim());
+	        }
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	        return;
+	    }
 
-                                try (ResultSet rs = stmt1.executeQuery()) {
-                                    if (rs.next()) {
-                                        int recordId = rs.getInt("RECORD_ID");
-                                        String senderName = rs.getString("SENDER_NAME");
-                                        String message = rs.getString("MESSAGE");
-                                        Timestamp sentTime = rs.getTimestamp("SENT_TIME");
+	    // Initialize the thread pool with the same size as the number of database servers
+	    executor = Executors.newFixedThreadPool(dbServers.size());
 
-                                        System.out.println("Sender " + senderName + " sent " + message + " at time " + sentTime);
+	    // Loop until the user presses Ctrl+C
+	    while (true) {
+	        // Check for available messages in each database server in parallel
+	        for (String dbServer : dbServers) {
+	            executor.execute(new CheckTask(dbServer));
+	        }
+	        // Wait for 1 second before checking again
+	        try {
+	            Thread.sleep(1000);
+	        } catch (InterruptedException e) {
+	            e.printStackTrace();
+	            break;
+	        }
+	    }
 
-                                        stmt2.setInt(1, recordId);
-                                        stmt2.executeUpdate();
-                                    }
-                                }
+	    // Shutdown the thread pool
+	    executor.shutdown();
+	}
 
-                                conn.commit();
-                            } catch (SQLException e) {
-                                conn.rollback();
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            });
+	// A task that checks for available messages in a database server
+	static class CheckTask implements Runnable {
 
-            thread.start();
-        }
+	    // The database server IP
+	    private String dbServer;
 
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            System.out.print("Enter 'exit' to stop reading: ");
-            String input = scanner.nextLine();
-            if (input.equalsIgnoreCase("exit")) {
-                break;
-            }
-        }
+	    public CheckTask(String dbServer) {
+	        this.dbServer = dbServer;
+	    }
 
-        for (Thread thread : Thread.getAllStackTraces().keySet()) {
-            thread.interrupt();
-        }
+	    @Override
+	    public void run() {
+	        // Create a connection to the database server
+	        try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbServer + ":5432/postgres", "dist_user", "dist_pass_123")) {
+	            // Create a statement to select an available message from the ASYNC_MESSAGES table
+	            try (PreparedStatement stmt = conn.prepareStatement("SELECT RECORD_ID, SENDER_NAME, MESSAGE, SENT_TIME FROM ASYNC_MESSAGES WHERE RECEIVED_TIME IS NULL AND SENDER_NAME != ? LIMIT 1")) {
+	                stmt.setString(1, READER_NAME);
+	                ResultSet rs = stmt.executeQuery();
+	                // If there is an available message, show it on the terminal and update the received time
+	                if (rs.next()) {
+	                    int recordId = rs.getInt("RECORD_ID");
+	                    String senderName = rs.getString("SENDER_NAME");
+	                    String message = rs.getString("MESSAGE");
+	                    Timestamp sentTime = rs.getTimestamp("SENT_TIME");
+	                    System.out.println("Sender " + senderName + " sent '" + message + "' at " + sentTime + " from " + dbServer);
+	                    try (PreparedStatement updateStmt = conn.prepareStatement("UPDATE ASYNC_MESSAGES SET RECEIVED_TIME = CURRENT_TIMESTAMP WHERE RECORD_ID = ?")) {
+	                        updateStmt.setInt(1, recordId);
+	                        updateStmt.executeUpdate();
+	                    }
+	                }
+	            }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+	    }
+	}
 
-        System.out.println("Reader program exited.");
-    }
 }

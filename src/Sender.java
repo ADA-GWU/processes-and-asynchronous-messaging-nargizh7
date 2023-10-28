@@ -1,88 +1,86 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.Scanner;
+import java.io.*; 
+import java.sql.*; 
+import java.util.*; 
+import java.util.concurrent.*;
 
 public class Sender {
-    private static final String[] DB_IPS = {"192.168.0.1", "192.168.0.2", "192.168.0.3"};
-    private static final String SENDER_NAME = "Nargiz";
-    private static final String DB_USER = "dist_user";
-    private static final String DB_PASS = "dist_pass_123";
-    private static final String SQL_INSERT = "INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, CURRENT_TIMESTAMP";
+	// A list of database server IPs
+	private static List<String> dbServers;
 
-    public static void main(String[] args) {
-        Thread[] senderThreads = new Thread[DB_IPS.length];
-        Connection[] connections = new Connection[DB_IPS.length];
+	// A thread pool to execute tasks
+	private static ExecutorService executor;
 
-        for (int i = 0; i < DB_IPS.length; i++) {
-            final int dbIndex = i;
+	// A scanner to read user input
+	private static Scanner scanner;
 
-            senderThreads[dbIndex] = new Thread(() -> {
-                try {
-                    connections[dbIndex] = DriverManager.getConnection("jdbc:postgresql://" + DB_IPS[dbIndex] + ":5432/postgres", DB_USER, DB_PASS);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    return;
-                }
+	// The sender name
+	private static final String SENDER_NAME = "NargizH";
 
-                try (Connection conn = connections[dbIndex];
-                     PreparedStatement stmt = conn.prepareStatement(SQL_INSERT)) {
+	public static void main(String[] args) {
+	    // Initialize the list of database servers from a file
+	    dbServers = new ArrayList<>();
+	    try (BufferedReader br = new BufferedReader(new FileReader("db_servers.txt"))) {
+	        String line;
+	        while ((line = br.readLine()) != null) {
+	            dbServers.add(line.trim());
+	        }
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	        return;
+	    }
 
-                    stmt.setString(1, SENDER_NAME);
+	    // Initialize the thread pool with the same size as the number of database servers
+	    executor = Executors.newFixedThreadPool(dbServers.size());
 
-                    while (!Thread.currentThread().isInterrupted()) {
-                        try {
-                            String message = getMessage();
+	    // Initialize the scanner to read user input
+	    scanner = new Scanner(System.in);
 
-                            stmt.setString(2, message);
-                            stmt.executeUpdate();
+	    // Loop until the user enters "exit"
+	    while (true) {
+	        System.out.print("Enter a message or exit: ");
+	        String message = scanner.nextLine();
+	        if (message.equalsIgnoreCase("exit")) {
+	            break;
+	        }
+	        // Choose a random thread to insert the message into a random database server
+	        int index = new Random().nextInt(dbServers.size());
+	        executor.execute(new InsertTask(dbServers.get(index), message));
+	    }
 
-                            System.out.println("Message sent to database " + dbIndex + ": " + message);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            });
+	    // Shutdown the thread pool and close the scanner
+	    executor.shutdown();
+	    scanner.close();
+	}
 
-            senderThreads[dbIndex].start();
-        }
+	// A task that inserts a message into a database server
+	static class InsertTask implements Runnable {
 
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            System.out.print("Enter 'exit' to stop sending: ");
-            String input = scanner.nextLine();
-            if (input.equalsIgnoreCase("exit")) {
-                break;
-            }
-        }
+	    // The database server IP
+	    private String dbServer;
 
-        for (Thread thread : senderThreads) {
-            thread.interrupt();
-        }
+	    // The message to insert
+	    private String message;
 
-        for (Connection connection : connections) {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+	    public InsertTask(String dbServer, String message) {
+	        this.dbServer = dbServer;
+	        this.message = message;
+	    }
 
-        System.out.println("Sender program exited.");
-    }
+	    @Override
+	    public void run() {
+	        // Create a connection to the database server
+	        try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbServer + ":5432/postgres", "dist_user", "dist_pass_123")) {
+	            // Create a statement to insert the message into the ASYNC_MESSAGES table
+	            try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, CURRENT_TIMESTAMP)")) {
+	                stmt.setString(1, SENDER_NAME);
+	                stmt.setString(2, message);
+	                stmt.executeUpdate();
+	                System.out.println("Inserted message '" + message + "' into " + dbServer);
+	            }
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
+	    }
+	}
 
-    private static String getMessage() throws InterruptedException {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter a message: ");
-        String message = scanner.nextLine();
-        return message;
-    }
 }
-
