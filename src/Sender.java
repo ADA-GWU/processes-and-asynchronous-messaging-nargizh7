@@ -1,117 +1,88 @@
-import java.io.*;
-import java.sql.*;
-import java.io.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Scanner;
 
 public class Sender {
-// A list of database server IPs
-private static final String[] DB_IPS = {"192.168.0.1", "192.168.0.2", "192.168.0.3"};
+    private static final String[] DB_IPS = {"192.168.0.1", "192.168.0.2", "192.168.0.3"};
+    private static final String SENDER_NAME = "Nargiz";
+    private static final String DB_USER = "dist_user";
+    private static final String DB_PASS = "dist_pass_123";
+    private static final String SQL_INSERT = "INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, CURRENT_TIMESTAMP";
 
-// A list of database connections
-private static final Connection[] DB_CONNS = new Connection[DB_IPS.length];
+    public static void main(String[] args) {
+        Thread[] senderThreads = new Thread[DB_IPS.length];
+        Connection[] connections = new Connection[DB_IPS.length];
 
-// A list of threads for each database connection
-private static final Thread[] DB_THREADS = new Thread[DB_IPS.length];
+        for (int i = 0; i < DB_IPS.length; i++) {
+            final int dbIndex = i;
 
-// The sender name
-private static final String SENDER_NAME = "Nargiz";
+            senderThreads[dbIndex] = new Thread(() -> {
+                try {
+                    connections[dbIndex] = DriverManager.getConnection("jdbc:postgresql://" + DB_IPS[dbIndex] + ":5432/postgres", DB_USER, DB_PASS);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return;
+                }
 
-// The database user name and password
-private static final String DB_USER = "dist_user";
-private static final String DB_PASS = "dist_pass_123";
+                try (Connection conn = connections[dbIndex];
+                     PreparedStatement stmt = conn.prepareStatement(SQL_INSERT)) {
 
-// The SQL statement to insert a message into ASYNC_MESSAGES table
-private static final String SQL_INSERT = "INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, CURRENT_TIMESTAMP)";
+                    stmt.setString(1, SENDER_NAME);
 
-public static void main(String[] args) {
-    // Initialize the database connections and threads
-    for (int i = 0; i < DB_IPS.length; i++) {
-        try {
-            // Connect to the database server with the given IP address
-            DB_CONNS[i] = DriverManager.getConnection("jdbc:postgresql://" + DB_IPS[i] + ":5432/postgres", DB_USER, DB_PASS);
+                    while (!Thread.currentThread().isInterrupted()) {
+                        try {
+                            String message = getMessage();
 
-            // Create a thread for the database connection
-            DB_THREADS[i] = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    // Get the current thread index
-                    int index = Thread.currentThread().getName().charAt(0) - '0';
+                            stmt.setString(2, message);
+                            stmt.executeUpdate();
 
-                    // Get the current database connection
-                    Connection conn = DB_CONNS[index];
-
-                    // Prepare a statement to insert a message into ASYNC_MESSAGES table
-                    try (PreparedStatement stmt = conn.prepareStatement(SQL_INSERT)) {
-                        // Set the sender name parameter
-                        stmt.setString(1, SENDER_NAME);
-
-                        // Loop until the thread is interrupted
-                        while (!Thread.currentThread().isInterrupted()) {
-                            try {
-                                // Wait for a message from the user input
-                                String message = getMessage();
-
-                                // Set the message parameter
-                                stmt.setString(2, message);
-
-                                // Execute the statement and insert the message into the table
-                                stmt.executeUpdate();
-
-                                // Print a confirmation message to the console
-                                System.out.println("Message sent to database " + index + ": " + message);
-                            } catch (InterruptedException e) {
-                                // The thread is interrupted, break the loop
-                                break;
-                            }
+                            System.out.println("Message sent to database " + dbIndex + ": " + message);
+                        } catch (InterruptedException e) {
+                            break;
                         }
-                    } catch (SQLException e) {
-                        // Print the SQL exception to the console
-                        e.printStackTrace();
                     }
+                } catch (SQLException e) {
+                    e.printStackTrace();
                 }
             });
 
-            // Set the thread name as the index of the database connection
-            DB_THREADS[i].setName(String.valueOf(i));
-
-            // Start the thread
-            DB_THREADS[i].start();
-        } catch (SQLException e) {
-            // Print the SQL exception to the console
-            e.printStackTrace();
+            senderThreads[dbIndex].start();
         }
-    }
 
-    // Wait for the user to exit the program by typing "exit"
-    while (true) {
-        try {
-            String input = getMessage();
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print("Enter 'exit' to stop sending: ");
+            String input = scanner.nextLine();
             if (input.equalsIgnoreCase("exit")) {
                 break;
             }
-        } catch (InterruptedException e) {
-            break;
         }
+
+        for (Thread thread : senderThreads) {
+            thread.interrupt();
+        }
+
+        for (Connection connection : connections) {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        System.out.println("Sender program exited.");
     }
 
-    // Interrupt all threads and close all database connections
-    for (int i = 0; i < DB_IPS.length; i++) {
-        try {
-            DB_THREADS[i].interrupt();
-            DB_CONNS[i].close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    private static String getMessage() throws InterruptedException {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter a message: ");
+        String message = scanner.nextLine();
+        return message;
     }
-
-    System.out.println("Sender program exited.");
 }
 
-// A method to get a message from the user input
-private static String getMessage() throws InterruptedException {
-    Scanner scanner = new Scanner(System.in);
-    System.out.print("Enter a message: ");
-    String message = scanner.nextLine();
-    return message;
-}
-}
