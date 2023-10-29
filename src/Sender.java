@@ -29,7 +29,7 @@ public class Sender {
 	        if (message.equalsIgnoreCase("exit")) {
 	            break;
 	        }
-	        int index = new Random().nextInt(dbServers.size());
+	        int index = ThreadLocalRandom.current().nextInt(dbServers.size());
 	        executor.execute(new InsertTask(dbServers.get(index), message));
 	    }
 	    executor.shutdown();
