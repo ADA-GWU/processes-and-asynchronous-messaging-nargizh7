@@ -59,5 +59,11 @@ public class Reader implements Runnable {
             }
         }
     }
-}
 
+    public static void main(String[] args) {
+        // You can run the Reader class from here if needed
+        Reader reader = new Reader("34.75.144.18");
+        Thread readerThread = new Thread(reader);
+        readerThread.start();
+    }
+}

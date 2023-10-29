@@ -15,38 +15,54 @@ public class Sender implements Runnable {
 
     public void run() {
         try {
-            // connect to the database server
+            // Load the PostgreSQL JDBC driver
+            Class.forName("org.postgresql.Driver");
+
+            // Connect to the database server
             conn = DriverManager.getConnection("jdbc:postgresql://" + dbIP + "/" + dbName, dbUser, dbPass);
             System.out.println("Connected to database " + dbIP);
 
-            // create a scanner object to read user input
+            // Create a scanner object to read user input
             Scanner sc = new Scanner(System.in);
 
-            // loop until interrupted
+            // Loop until interrupted
             while (true) {
-                // prompt the user to enter a text message
+                // Prompt the user to enter a text message
                 System.out.print("Enter a text message: ");
                 String message = sc.nextLine();
 
-                // insert a record into the ASYNC_MESSAGES table with the sender name, message and current time
+                // Insert a record into the ASYNC_MESSAGES table with the sender name, message, and current time
                 PreparedStatement pstmt = conn.prepareStatement("INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, ?)");
                 pstmt.setString(1, "NargizH");
                 pstmt.setString(2, message);
                 pstmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
                 pstmt.executeUpdate();
 
-                // sleep for a random interval between 1 and 5 seconds
+                // Sleep for a random interval between 1 and 5 seconds
                 Thread.sleep((int) (Math.random() * 4000) + 1000);
             }
+        } catch (ClassNotFoundException e) {
+            System.err.println("PostgreSQL JDBC driver not found. Make sure it is in your classpath.");
+        } catch (SQLException e) {
+            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             try {
-                // close the connection
-                conn.close();
-            } catch (Exception e) {
+                if (conn != null) {
+                    // Close the connection
+                    conn.close();
+                }
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    public static void main(String[] args) {
+        // You can run the Sender class from here if needed
+        Sender sender = new Sender("34.75.144.18");
+        Thread senderThread = new Thread(sender);
+        senderThread.start();
     }
 }
