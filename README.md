@@ -3,17 +3,21 @@ Follow these steps to install and run the application on your machine:
 1. Clone the application repository to your local machine: git clone https://github.com/ADA-GWU/processes-and-asynchronous-messaging-nargizh7.git
 2. Change your working directory to the project directory: cd processes-and-asynchronous-messaging-nargizh7
 3. Enter the "src" directory where the code files are located: cd src
-4. Make sure you have the PostgreSQL JDBC driver (JAR file) on your system. You can download it from the official PostgreSQL website or use the one provided in this project. You can use the following link: https://jdbc.postgresql.org/download/
-5. Compile the Java files with the PostgreSQL JDBC driver included in the classpath in two terminal windows (one for the Sender, one for the Reader): javac -cp "path/to/postgresql-42.6.0.jar" Sender.java Reader.java
+4. Make sure you have the PostgreSQL JDBC driver (JAR file) on your system. You can download it from the official PostgreSQL website or use the one provided in this project.
+   You can use the following link: https://jdbc.postgresql.org/download/
+6. Compile the Java files with the PostgreSQL JDBC driver included in the classpath in two terminal windows (one for the Sender java file, one for the Reader java file):
+   javac -cp "path/to/postgresql-42.6.0.jar" Sender.java Reader.java
 Example:
 PS C:\Users\nargiz\new-eclipse-workspace\AsynchMessaging\src> javac -cp "C:\Users\nargiz\Desktop\postgresql-42.6.0.jar" Sender.java Reader.java
    
 ## Running the Sender and Reader
-1. In one terminal window, execute the Sender and specify the database server IPs as command-line arguments: java -cp ".;path/to/postgresql-42.6.0.jar" Sender IP1 IP2
+1. In one terminal window, execute the Sender and specify the database server IPs as command-line arguments:
+   java -cp ".;path/to/postgresql-42.6.0.jar" Sender IP1 IP2
 Example:
 PS C:\Users\nargiz\new-eclipse-workspace\AsynchMessaging\src> java -cp ".;C:\Users\nargiz\Desktop\postgresql-42.6.0.jar" Sender 34.75.144.18 34.75.123.81
 
-2. In another terminal window, execute the Reader and specify the database server IPs as command-line arguments: java -cp ".;path/to/postgresql-42.6.0.jar" Reader IP1 IP2
+3. In another terminal window, execute the Reader and specify the database server IPs as command-line arguments:
+   java -cp ".;path/to/postgresql-42.6.0.jar" Reader IP1 IP2
 Example:
 PS C:\Users\nargiz\new-eclipse-workspace\AsynchMessaging\src> java -cp ".;C:\Users\nargiz\Desktop\postgresql-42.6.0.jar" Reader 34.75.144.18 34.75.123.81
 
