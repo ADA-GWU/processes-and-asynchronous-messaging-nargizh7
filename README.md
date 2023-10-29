@@ -1,42 +1,40 @@
-# processes-and-asynchronous-messaging-nargizh7
-processes-and-asynchronous-messaging-nargizh7 created by GitHub Classroom
+## Installation
+Follow these steps to install and run the application on your machine:
+1. Clone the application repository to your local machine: git clone https://github.com/ADA-GWU/processes-and-asynchronous-messaging-nargizh7.git
+2. Change your working directory to the project directory: cd processes-and-asynchronous-messaging-nargizh7
+3. Make sure you have the PostgreSQL JDBC driver (JAR file) on your system. You can download it from the official PostgreSQL website or use the one provided in this project.
+4. Enter the "src" directory where the code files are located: cd src
+5. Compile the Java files with the PostgreSQL JDBC driver included in the classpath: javac -cp "path/to/postgresql-42.6.0.jar" Sender.java Reader.java
+6. Now you are ready to run the sender and reader components in separate terminal windows!
 
-This is a Java program that implements asynchronous concurrent messaging using PostgreSQL databases. 
-The program consists of two parts: a sender and a reader.
+## Running the Sender
+The Sender program allows you to insert messages into the database.
+In one terminal window, execute the Sender: java -cp ".;path/to/postgresql-42.6.0.jar" Sender
 
-## Installation:
-Clone the application repository to your local machine: git clone https://github.com/ADA-GWU/processes-and-asynchronous-messaging-nargizh7.git
-Change your working directory to the project directory: cd processes-and-asynchronous-messaging-nargizh7
-Enter the "src" directory where the code files are located: cd src
+## Running the Reader
+The Reader program retrieves and displays messages from the database.
+In another terminal window, execute the Reader: java -cp ".;path/to/postgresql-42.6.0.jar" Reader
 
-## Sender
-The sender  reads the list of database server IPs and connects to all the databases in different threads. 
-The user can enter a text message and the program will choose one of the threads and insert a record into ASYNC_MESSAGES table with the sender name, the message and the current time.
+## Example
+1st terminal window:
+PS C:\Users\nargi\new-eclipse-workspace\AsynchMessaging\src> javac -cp "C:\Users\nargi\Desktop\postgresql-42.6.0.jar" Sender.java Reader.java
+PS C:\Users\nargi\new-eclipse-workspace\AsynchMessaging\src> java -cp ".;C:\Users\nargi\Desktop\postgresql-42.6.0.jar" Sender
 
-## Reader
-The reader checks available messages in each database. 
-An available message is one that has not been received by any reader and has a different sender name than the reader. 
-The reader will pick one message like this, show it on the terminal as Sender XXX sent XXX at time XXXX, and then set the received time to the current time. 
-The reader will also block the record while reading to prevent other readers from accessing the same message.
+2nd terminal window:
+PS C:\Users\nargi\new-eclipse-workspace\AsynchMessaging\src> javac -cp "C:\Users\nargi\Desktop\postgresql-42.6.0.jar" Sender.java Reader.java
+PS C:\Users\nargi\new-eclipse-workspace\AsynchMessaging\src> java -cp ".;C:\Users\nargi\Desktop\postgresql-42.6.0.jar" Reader
 
-## How to run
-To run the program, you need to have Java installed on your machine and PostgreSQL drivers in your classpath. 
-You also need to have access to PostgreSQL databases with the following configuration:
+## Usage
+The Sender program allows you to insert messages into the ASYNC_MESSAGES table in the database. You will be prompted to enter a message, which will be associated with your name and the current time.
 
-- Access from any other IPs with dist_user/dist_pass_123 credentials.
-- When an image is created, create the following table:
-ASYNC_MESSAGES (
- RECORD_ID auto increment number,
- SENDER_NAME varchar(30),
- MESSAGE varchar(30),
- SENT_TIME DATE/TIME,
- RECEIVED_TIME DATA/TIME)
+The Reader program retrieves and displays messages from the ASYNC_MESSAGES table that meet the following criteria:
 
-To compile the program, use the following command:
-`javac Sender.java Reader.java`
-To run the sender software, use the following command:
-`java Sender`
-To run the reader software, use the following command:
-`java Reader`
-To exit the program, type "exit" in the terminal.
+The RECEIVED_TIME column is NULL.
+The SENDER_NAME is not your name.
+The Reader will display the available messages and mark them as received with the current time to avoid multiple readers accessing the same message simultaneously.
+
+   
+
+
+
 
