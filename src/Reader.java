@@ -1,11 +1,8 @@
-
 import java.sql.*;
 import java.util.*;
 
 public class Reader implements Runnable {
     private List<String> dbIPs; // List of Database server IPs
-    private String readerName = "NargizH"; // Your reader name
-    private Random random = new Random();
 
     public Reader(List<String> dbIPs) {
         this.dbIPs = dbIPs;
@@ -53,7 +50,13 @@ public class Reader implements Runnable {
     }
 
     public static void main(String[] args) {
-        List<String> dbIPs = Arrays.asList("34.75.144.18", "34.75.123.81"); // Replace with your DB IPs
+        // Check if the user provided the list of DB IPs as command-line arguments
+        if (args.length == 0) {
+            System.out.println("Please specify the database server IPs as command-line arguments.");
+            return;
+        }
+
+        List<String> dbIPs = Arrays.asList(args);
 
         Reader reader = new Reader(dbIPs);
         Thread readerThread = new Thread(reader);

@@ -44,7 +44,13 @@ public class Sender implements Runnable {
     }
 
     public static void main(String[] args) {
-        List<String> dbIPs = Arrays.asList("34.75.144.18", "34.75.123.81"); // Replace with your DB IPs
+        // Check if the user provided the list of DB IPs as command-line arguments
+        if (args.length == 0) {
+            System.out.println("Please specify the database server IPs as command-line arguments.");
+            return;
+        }
+
+        List<String> dbIPs = Arrays.asList(args);
 
         Sender sender = new Sender(dbIPs);
         Thread senderThread = new Thread(sender);
