@@ -10,12 +10,9 @@ Follow these steps to install and run the application on your machine:
 Example:
 PS C:\Users\nargiz\new-eclipse-workspace\AsynchMessaging\src> javac -cp "C:\Users\nargiz\Desktop\postgresql-42.6.0.jar" Sender.java Reader.java
    
-To structure the text for your GitHub README preview, you can use Markdown syntax. Here's how you can format the provided text:
-
 ```markdown
 ## Running the Sender and Reader
 
-### Sender
 In one terminal window, execute the Sender and specify the database server IPs as command-line arguments:
 ```
 java -cp ".;path/to/postgresql-42.6.0.jar" Sender IP1 IP2
@@ -25,7 +22,6 @@ Example:
 PS C:\Users\nargiz\new-eclipse-workspace\AsynchMessaging\src> java -cp ".;C:\Users\nargiz\Desktop\postgresql-42.6.0.jar" Sender 34.75.144.18 34.75.123.81
 ```
 
-### Reader
 In another terminal window, execute the Reader and specify the database server IPs as command-line arguments:
 ```
 java -cp ".;path/to/postgresql-42.6.0.jar" Reader IP1 IP2
