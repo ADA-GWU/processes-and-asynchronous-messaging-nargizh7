@@ -1,61 +1,50 @@
-import java.io.*;
 import java.sql.*;
 import java.util.*;
-import java.util.concurrent.*;
 
-public class Sender {
-    private static List<String> dbServers;
-    private static ExecutorService executor;
-    private static Scanner scanner;
-    private static final String SENDER_NAME = "NargizH";
-    private static final String DB_SERVER_IP = "172.17.0.2";
+public class Sender implements Runnable {
 
-    public static void main(String[] args) {
-        dbServers = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader("db_servers.txt"))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                dbServers.add(line.trim());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        executor = Executors.newFixedThreadPool(dbServers.size());
-        scanner = new Scanner(System.in);
+    private String dbIP; // the IP address of the database server
+    private String dbName = "hw1"; // the name of the database
+    private String dbUser = "dist_user"; // the username of the database
+    private String dbPass = "dist_pass_123"; // the password of the database
+    private Connection conn; // the connection object to the database
 
-        while (true) {
-            System.out.print("Enter a message or exit: ");
-            String message = scanner.nextLine();
-            if (message.equalsIgnoreCase("exit")) {
-                break;
-            }
-            int index = new Random().nextInt(dbServers.size());
-            executor.execute(new InsertTask(dbServers.get(index), message));
-        }
-        executor.shutdown();
-        scanner.close();
+    public Sender(String dbIP) {
+        this.dbIP = dbIP;
     }
 
-    static class InsertTask implements Runnable {
-        private String dbServer;
-        private String message;
+    public void run() {
+        try {
+            // connect to the database server
+            conn = DriverManager.getConnection("jdbc:postgresql://" + dbIP + "/" + dbName, dbUser, dbPass);
+            System.out.println("Connected to database " + dbIP);
 
-        public InsertTask(String dbServer, String message) {
-            this.dbServer = dbServer;
-            this.message = message;
-        }
+            // create a scanner object to read user input
+            Scanner sc = new Scanner(System.in);
 
-        @Override
-        public void run() {
-            try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbServer + ":5432/postgres")) {
-                try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, CURRENT_TIMESTAMP)")) {
-                    stmt.setString(1, SENDER_NAME);
-                    stmt.setString(2, message);
-                    stmt.executeUpdate();
-                    System.out.println("Inserted message '" + message + "' into " + dbServer);
-                }
-            } catch (SQLException e) {
+            // loop until interrupted
+            while (true) {
+                // prompt the user to enter a text message
+                System.out.print("Enter a text message: ");
+                String message = sc.nextLine();
+
+                // insert a record into the ASYNC_MESSAGES table with the sender name, message and current time
+                PreparedStatement pstmt = conn.prepareStatement("INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, ?)");
+                pstmt.setString(1, "NargizH");
+                pstmt.setString(2, message);
+                pstmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+                pstmt.executeUpdate();
+
+                // sleep for a random interval between 1 and 5 seconds
+                Thread.sleep((int) (Math.random() * 4000) + 1000);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                // close the connection
+                conn.close();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
