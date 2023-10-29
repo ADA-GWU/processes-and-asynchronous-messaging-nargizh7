@@ -8,6 +8,7 @@ public class Sender {
     private static ExecutorService executor;
     private static Scanner scanner;
     private static final String SENDER_NAME = "NargizH";
+    private static final String DB_SERVER_IP = "172.17.0.2";
 
     public static void main(String[] args) {
         dbServers = new ArrayList<>();
@@ -47,7 +48,7 @@ public class Sender {
 
         @Override
         public void run() {
-            try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbServer + ":5432/postgres", "dist_user", "dist_pass_123")) {
+            try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbServer + ":5432/postgres")) {
                 try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO ASYNC_MESSAGES (SENDER_NAME, MESSAGE, SENT_TIME) VALUES (?, ?, CURRENT_TIMESTAMP)")) {
                     stmt.setString(1, SENDER_NAME);
                     stmt.setString(2, message);

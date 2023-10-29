@@ -7,6 +7,7 @@ public class Reader {
     private static List<String> dbServers;
     private static ExecutorService executor;
     private static final String READER_NAME = "NargizH";
+    private static final String DB_SERVER_IP = "172.17.0.2";
 
     public static void main(String[] args) {
         dbServers = new ArrayList<>();
@@ -46,7 +47,7 @@ public class Reader {
 
         @Override
         public void run() {
-            try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbServer + ":5432/postgres", "dist_user", "dist_pass_123")) {
+            try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + dbServer + ":5432/postgres")) {
                 try (PreparedStatement stmt = conn.prepareStatement("SELECT RECORD_ID, SENDER_NAME, MESSAGE, SENT_TIME FROM ASYNC_MESSAGES WHERE RECEIVED_TIME IS NULL AND SENDER_NAME != ? LIMIT 1 FOR UPDATE")) {
                     stmt.setString(1, READER_NAME);
                     ResultSet rs = stmt.executeQuery();
